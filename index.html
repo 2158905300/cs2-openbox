@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>梦魇武器箱 · 开箱模拟器</title>
+<style>
+  :root{
+    --blue:#4b69ff; --purple:#8847ff; --pink:#d32ce6; --red:#eb4b4b; --gold:#ffd700;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:#101418; color:#d6dbe1;
+    font-family:"Microsoft YaHei",system-ui,sans-serif; user-select:none;
+  }
+  header{
+    display:flex; align-items:center; gap:16px;
+    padding:14px 22px; background:#151b21; border-bottom:1px solid #232c35;
+  }
+  header h1{font-size:17px; margin:0; font-weight:600; letter-spacing:1px}
+  header .tag{font-size:12px; color:#7d8896}
+  header .spacer{flex:1}
+  button{
+    background:#232c35; color:#d6dbe1; border:1px solid #313d49;
+    padding:8px 16px; border-radius:4px; cursor:pointer; font-size:13px;
+    font-family:inherit;
+  }
+  button:hover{background:#2c3742}
+  button.primary{background:#c9a227; border-color:#e0b52c; color:#1a1a1a; font-weight:700}
+  button.primary:disabled{opacity:.45; cursor:default}
+  .stage{position:relative; padding:26px 0 8px; overflow:hidden; background:
+     linear-gradient(180deg,#0d1116 0%,#141a21 50%,#0d1116 100%)}
+  .track{
+    display:flex; gap:8px; will-change:transform;
+    padding:0 calc(50% - 90px);
+  }
+  .card{
+    flex:0 0 180px; height:150px; border-radius:4px; position:relative;
+    background:linear-gradient(180deg,#1d242c,#161c22);
+    border:1px solid #2b343d; overflow:hidden;
+    display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .card .bar{height:5px; width:100%}
+  .card .gun{height:96px; display:flex; align-items:center; justify-content:center;
+    font-size:34px; opacity:.85}
+  .card .nm{padding:6px 8px; font-size:12px; line-height:1.25; text-align:center;
+    background:rgba(0,0,0,.45); min-height:44px}
+  .card .st{color:#cf6a32; font-weight:700}
+  .marker{
+    position:absolute; left:50%; top:18px; bottom:14px; width:3px; margin-left:-1.5px;
+    background:linear-gradient(180deg,#ffd700,#ffb400); box-shadow:0 0 12px #ffd70088; z-index:5;
+  }
+  .marker:before,.marker:after{
+    content:""; position:absolute; left:-5px; width:13px; height:13px;
+    background:#ffd700; transform:rotate(45deg);
+  }
+  .marker:before{top:-8px} .marker:after{bottom:-8px}
+  .result{
+    margin:16px 22px 0; padding:16px 18px; border-radius:6px; background:#151b21;
+    border:1px solid #232c35; min-height:74px; display:flex; align-items:center; gap:16px;
+  }
+  .result .dot{width:10px;height:10px;border-radius:50%}
+  .result .rn{font-size:16px; font-weight:700}
+  .result .rp{font-size:13px; color:#8b96a3}
+  .stats{display:flex; flex-wrap:wrap; gap:10px; margin:14px 22px}
+  .stat{background:#151b21; border:1px solid #232c35; border-radius:6px;
+    padding:10px 14px; min-width:132px}
+  .stat .k{font-size:11px; color:#7d8896}
+  .stat .v{font-size:17px; font-weight:700; margin-top:3px}
+  .pos{color:#5aca7a} .neg{color:#e0614f}
+  .inv{margin:6px 22px 26px; max-height:190px; overflow:auto;
+    background:#12171d; border:1px solid #232c35; border-radius:6px; padding:10px 12px}
+  .inv div{font-size:12.5px; padding:3px 0; border-bottom:1px dashed #1e252d}
+  .inv div:last-child{border:0}
+  .note{margin:0 22px 24px; font-size:12px; color:#6d7784; line-height:1.7}
+  .note b{color:#96a1ae}
+</style>
+</head>
+<body>
+<header>
+  <h1>梦魇武器箱 <span class="tag">Dreams &amp; Nightmares Case · 模拟器</span></h1>
+  <div class="spacer"></div>
+  <button id="open1" class="primary">开一次（¥18）</button>
+  <button id="open10">连开 10 次</button>
+  <button id="fast">快速模拟 1000 次</button>
+  <button id="reset">清空统计</button>
+</header>
+
+<div class="stage">
+  <div class="marker"></div>
+  <div class="track" id="track"></div>
+</div>
+
+<div class="result" id="result">
+  <div class="dot" style="background:#2b343d"></div>
+  <div><div class="rn">准备好了吗</div><div class="rp">点右上角「开一次」，用的是官方公示掉率</div></div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="k">已开</div><div class="v" id="s_open">0</div></div>
+  <div class="stat"><div class="k">花费</div><div class="v" id="s_cost">¥0</div></div>
+  <div class="stat"><div class="k">回收</div><div class="v" id="s_back">¥0</div></div>
+  <div class="stat"><div class="k">盈亏</div><div class="v" id="s_net">¥0</div></div>
+  <div class="stat"><div class="k">回报率</div><div class="v" id="s_roi">—</div></div>
+  <div class="stat"><div class="k">最好的一次</div><div class="v" id="s_best" style="font-size:14px">—</div></div>
+</div>
+
+<div class="inv" id="inv"><div style="color:#6d7784">开出来的东西会列在这里（虚拟，不会进你的库存）</div></div>
+
+<p class="note">
+  <b>掉率</b>：军规级 79.92% ｜ 受限 15.98% ｜ 机密 3.2% ｜ 保密 0.64% ｜ 稀有特殊（刀）0.26%（约 385 分之一）；StatTrak™ 10%。<br>
+  <b>价格</b>：红/粉档为今日实测；紫/蓝档与刀价为代表性样本（刀池用了 30 把，真实是 55 把），只为了让数字有量级感。<br>
+  <b>这套模型的期望值 ≈ ¥14.4／次，而每次真实成本 ¥25</b>（钥匙 ¥18 + 箱 ¥7）——长期每开一次平均亏 ¥10 左右，和第三方实测的 ¥14.34 对得上。<br>
+  <b>提醒</b>：模拟出来的东西不进库存；模拟里赚了不代表真开能赚，短期波动正是它会骗你的地方。
+</p>
+
+<script>
+const KEY_COST = 18, CASE_COST = 7, COST = KEY_COST + CASE_COST;
+const ST_CHANCE = 0.10, ST_MULT = 1.4;
+
+// 名称与档位来自公开掉落表；价格单位 ¥
+const TIERS = [
+  { key:'blue',   name:'军规级', odd:0.7992, color:'var(--blue)',   items:[
+    ['FN57 | 涂鸦潦草', 0.9], ['截短霰弹枪 | 灵应牌', 1.2], ['MP5-SD | 小小噩梦', 1.5],
+    ['MAC-10 | 坐牢', 1.1], ['P2000 | 升天', 1.0], ['MAG-7 | 先见之明', 0.8],
+    ['SCAR-20 | 暗夜活死鸡', 2.2] ]},
+  { key:'purple', name:'受限',   odd:0.1598, color:'var(--purple)', items:[
+    ['USP 消音版 | 地狱门票', 12], ['M4A1 消音版 | 夜无眠', 8],
+    ['PP-野牛 | 太空猫', 3.5], ['XM1014 | 行尸攻势', 4.0] ]},
+  { key:'pink',   name:'机密',   odd:0.0320, color:'var(--pink)',   items:[
+    ['法玛斯 | 目皆转睛', 45], ['双持贝瑞塔 | 瓜瓜', 48],
+    ['MP7 | 幽幻深渊', 42], ['G3SG1 | 梦之林地', 38] ]},
+  { key:'red',    name:'保密',   odd:0.0064, color:'var(--red)',    items:[
+    ['AK-47 | 夜愿', 420], ['MP9 | 星使', 400] ]},
+  { key:'gold',   name:'稀有特殊物品', odd:0.0026, color:'var(--gold)', items:[
+    ['★ 蝴蝶刀 | 伽玛多普勒（翡翠）', 48443], ['★ 蝴蝶刀 | 伽玛多普勒（Phase 2）', 15150],
+    ['★ 蝴蝶刀 | 伽玛多普勒', 11070], ['★ 蝴蝶刀 | 自动化', 4470],
+    ['★ 蝴蝶刀 | 传说', 3420], ['★ 折刀 | 伽玛多普勒', 1306],
+    ['★ 猎杀者匕首 | 伽玛多普勒', 1143], ['★ 鲍伊猎刀 | 伽玛多普勒', 1065],
+    ['★ 暗影双匕 | 伽玛多普勒', 582], ['★ 鲍伊猎刀 | 伽玛多普勒（翡翠）', 410],
+    ['★ 暗影双匕 | 传说', 298], ['★ 猎杀者匕首 | 伽玛多普勒（翡翠）', 250],
+    ['★ 折刀 | 表面淬火', 180], ['★ 猎杀者匕首 | 自由之手', 150],
+    ['★ 暗影双匕 | 蓝钢', 130], ['★ 鲍伊猎刀 | 表面淬火', 110],
+    ['★ 折刀 | 致命紫罗兰', 95], ['★ 猎杀者匕首 | 都市危机', 85],
+    ['★ 暗影双匕 | 枯焦之色', 78], ['★ 鲍伊猎刀 | 森林 DDPAT', 72],
+    ['★ 折刀 | 森林 DDPAT', 65], ['★ 猎杀者匕首 | 森林 DDPAT', 60],
+    ['★ 暗影双匕 | 森林 DDPAT', 55], ['★ 折刀 | 都市危机', 50],
+    ['★ 猎杀者匕首 | 表面淬火', 45], ['★ 鲍伊猎刀 | 都市危机', 40],
+    ['★ 暗影双匕 | 表面淬火', 38], ['★ 折刀 | 北方森林', 35],
+    ['★ 猎杀者匕首 | 枯焦之色', 32], ['★ 鲍伊猎刀 | 北方森林', 30] ]},
+];
+
+function rollTier(){
+  const r = Math.random();
+  let acc = 0;
+  for (const t of TIERS){ acc += t.odd; if (r < acc) return t; }
+  return TIERS[0];
+}
+function rollItem(){
+  const t = rollTier();
+  const it = t.items[Math.floor(Math.random()*t.items.length)];
+  const st = Math.random() < ST_CHANCE;
+  return { tier:t, name:it[0], price:+(it[1]*(st?ST_MULT:1)).toFixed(2), st };
+}
+function randomCard(){
+  const t = TIERS[Math.floor(Math.random()*TIERS.length)];
+  const it = t.items[Math.floor(Math.random()*t.items.length)];
+  return { tier:t, name:it[0], price:it[1], st:Math.random()<ST_CHANCE, filler:true };
+}
+
+const track = document.getElementById('track');
+const CARD_W = 188; // 180 + gap 8
+let spinning = false, busy = false;
+
+function cardEl(o){
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.innerHTML = `<div class="gun">🔫</div>
+    <div class="nm">${o.st?'<span class="st">StatTrak™</span> ':''}${o.name}</div>
+    <div class="bar" style="background:${o.tier.color}"></div>`;
+  return d;
+}
+
+function buildStrip(win){
+  track.style.transition = 'none';
+  track.style.transform = 'translateX(0px)';
+  track.innerHTML = '';
+  const total = 72, winIdx = 66;
+  const arr = [];
+  for (let i=0;i<total;i++) arr.push(i===winIdx ? win : randomCard());
+  arr.forEach(o => track.appendChild(cardEl(o)));
+  return { winIdx, total };
+}
+
+function spin(win){
+  return new Promise(res => {
+    const { winIdx } = buildStrip(win);
+    const jitter = (Math.random()-0.5) * 120;              // 落点不总是正中
+    // 轨道左内边距 = 50% - 90px，所以第 i 张卡的中心天然在「屏幕中线 + i*188」处
+    const target = -(winIdx * CARD_W) + jitter;
+    requestAnimationFrame(() => {
+      track.style.transition = 'transform 6.2s cubic-bezier(.06,.72,.06,1)';
+      track.style.transform = `translateX(${target}px)`;
+      setTimeout(res, 6400);
+    });
+  });
+}
+
+const S = { opens:0, cost:0, back:0, best:null, log:[] };
+const $ = id => document.getElementById(id);
+function render(){
+  $('s_open').textContent = S.opens;
+  $('s_cost').textContent = '¥' + S.cost.toFixed(2);
+  $('s_back').textContent = '¥' + S.back.toFixed(2);
+  const net = S.back - S.cost;
+  const netEl = $('s_net');
+  netEl.textContent = (net>=0?'+¥':'-¥') + Math.abs(net).toFixed(2);
+  netEl.className = 'v ' + (net>=0?'pos':'neg');
+  $('s_roi').textContent = S.cost ? (S.back/S.cost*100).toFixed(1) + '%' : '—';
+  $('s_best').textContent = S.best ? S.best.name + '（¥' + S.best.price + '）' : '—';
+  const inv = $('inv');
+  if (!S.log.length){ inv.innerHTML = '<div style="color:#6d7784">开出来的东西会列在这里（虚拟，不会进你的库存）</div>'; return; }
+  inv.innerHTML = S.log.map(o=>{
+    const col = o.tier.color.match(/--(\w+)/) ? getComputedStyle(document.documentElement).getPropertyValue('--'+o.tier.color.match(/--(\w+)/)[1]) : o.tier.color;
+    return `<div><span style="color:${col}">●</span> ${o.st?'<span class="st">StatTrak™</span> ':''}${o.name} <span style="color:#6d7784">— ¥${o.price}</span></div>`;
+  }).join('');
+}
+function record(o){
+  S.opens++; S.cost += COST; S.back += o.price;
+  if (!S.best || o.price > S.best.price) S.best = o;
+  S.log.unshift(o);
+  if (S.log.length > 120) S.log.pop();
+}
+
+async function one(){
+  if (busy) return;
+  busy = true; $('open1').disabled = $('open10').disabled = true;
+  const win = rollItem();
+  await spin(win);
+  record(win);
+  const col = win.tier.color.match(/--(\w+)/) ? getComputedStyle(document.documentElement).getPropertyValue('--'+win.tier.color.match(/--(\w+)/)[1]) : win.tier.color;
+  $('result').innerHTML =
+    `<div class="dot" style="background:${col}"></div>
+     <div><div class="rn" style="color:${col}">${win.st?'StatTrak™ ':''}${win.name}</div>
+     <div class="rp">${win.tier.name} · 市场价约 ¥${win.price} · 本次成本 ¥${COST} · 这一发${win.price>=COST?'赚了':'亏了'} ¥${Math.abs(win.price-COST).toFixed(2)}</div></div>`;
+  render();
+  busy = false; $('open1').disabled = $('open10').disabled = false;
+}
+
+async function ten(){
+  if (busy) return;
+  busy = true; $('open1').disabled = $('open10').disabled = true;
+  let last = null, sum = 0;
+  for (let i=0;i<10;i++){
+    const win = rollItem();
+    await spin(win);
+    record(win); last = win; sum += win.price;
+  }
+  const col = last.tier.color.match(/--(\w+)/) ? getComputedStyle(document.documentElement).getPropertyValue('--'+last.tier.color.match(/--(\w+)/)[1]) : last.tier.color;
+  $('result').innerHTML =
+    `<div class="dot" style="background:${col}"></div>
+     <div><div class="rn">连开 10 次完成</div>
+     <div class="rp">总成本 ¥${COST*10} · 总回收 ¥${sum.toFixed(2)} · 净 ${sum-COST*10>=0?'+':'-'}¥${Math.abs(sum-COST*10).toFixed(2)}（最好的一次：${last.name}）</div></div>`;
+  render();
+  busy = false; $('open1').disabled = $('open10').disabled = false;
+}
+
+$('open1').onclick = one;
+$('open10').onclick = ten;
+$('fast').onclick = () => {
+  const N = 1000; let sum = 0, win = 0, best = null; const cnt = {};
+  for (let i=0;i<N;i++){
+    const o = rollItem(); sum += o.price;
+    if (o.price >= COST) win++;
+    if (!best || o.price > best.price) best = o;
+    cnt[o.tier.name] = (cnt[o.tier.name]||0) + 1;
+  }
+  S.opens += N; S.cost += COST*N; S.back += sum;
+  if (!S.best || best.price > S.best.price) S.best = best;
+  const net = sum - COST*N;
+  const dist = Object.entries(cnt).map(([k,v])=>`${k} ${v}（${(v/N*100).toFixed(2)}%）`).join(' ｜ ');
+  $('result').innerHTML =
+    `<div class="dot" style="background:#c9a227"></div>
+     <div><div class="rn">快速模拟 ${N} 次</div>
+     <div class="rp">总成本 ¥${(COST*N).toLocaleString()} · 总回收 ¥${sum.toFixed(0)} · 净 ${net>=0?'+':'-'}¥${Math.abs(net).toFixed(0)} · 回本次数 ${win}（${(win/N*100).toFixed(1)}%）· 最好 ${best.name}（¥${best.price}）<br>${dist}</div></div>`;
+  render();
+};
+$('reset').onclick = () => { S.opens=0;S.cost=0;S.back=0;S.best=null;S.log=[]; render();
+  $('result').innerHTML = '<div class="dot" style="background:#2b343d"></div><div><div class="rn">已清空</div><div class="rp">统计归零</div></div>'; };
+
+render();
+</script>
+</body>
+</html>
