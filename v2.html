@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>CS2 开箱模拟器 · 梦魇 / 热潮</title>
+<style>
+  :root{ --blue:#4b69ff; --purple:#8847ff; --pink:#d32ce6; --red:#eb4b4b; --gold:#ffd700; }
+  *{box-sizing:border-box}
+  body{margin:0;background:#101418;color:#d6dbe1;font-family:"Microsoft YaHei",system-ui,sans-serif;user-select:none}
+  header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:#151b21;border-bottom:1px solid #232c35;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:600;letter-spacing:1px}
+  header .tag{font-size:12px;color:#7d8896}
+  header .spacer{flex:1}
+  button{background:#232c35;color:#d6dbe1;border:1px solid #313d49;padding:8px 14px;border-radius:4px;cursor:pointer;font-size:13px;font-family:inherit}
+  button:hover{background:#2c3742}
+  button.case.on{background:#2b4a63;border-color:#3f6d92;color:#fff}
+  button.primary{background:#c9a227;border-color:#e0b52c;color:#1a1a1a;font-weight:700}
+  button:disabled{opacity:.45;cursor:default}
+  .stage{position:relative;padding:24px 0 6px;overflow:hidden;background:linear-gradient(180deg,#0d1116,#141a21 50%,#0d1116)}
+  .track{display:flex;gap:8px;will-change:transform;padding:0 calc(50% - 90px)}
+  .card{flex:0 0 180px;height:156px;border-radius:4px;position:relative;background:linear-gradient(180deg,#1d242c,#161c22);border:1px solid #2b343d;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
+  .card .bar{height:5px;width:100%}
+  .card .gun{height:92px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.85}
+  .card .nm{padding:5px 7px;font-size:12px;line-height:1.25;text-align:center;background:rgba(0,0,0,.45);min-height:52px}
+  .card .st{color:#cf6a32;font-weight:700}
+  .card .wr{font-size:10.5px;color:#8b96a3}
+  .marker{position:absolute;left:50%;top:16px;bottom:12px;width:3px;margin-left:-1.5px;background:linear-gradient(180deg,#ffd700,#ffb400);box-shadow:0 0 12px #ffd70088;z-index:5}
+  .marker:before,.marker:after{content:"";position:absolute;left:-5px;width:13px;height:13px;background:#ffd700;transform:rotate(45deg)}
+  .marker:before{top:-8px}.marker:after{bottom:-8px}
+  .result{margin:14px 20px 0;padding:14px 16px;border-radius:6px;background:#151b21;border:1px solid #232c35;min-height:76px;display:flex;align-items:center;gap:14px}
+  .result .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .result .rn{font-size:16px;font-weight:700}
+  .result .rp{font-size:12.5px;color:#8b96a3;line-height:1.6;margin-top:3px}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin:12px 20px}
+  .stat{background:#151b21;border:1px solid #232c35;border-radius:6px;padding:9px 13px;min-width:128px}
+  .stat .k{font-size:11px;color:#7d8896}
+  .stat .v{font-size:17px;font-weight:700;margin-top:3px}
+  .pos{color:#5aca7a}.neg{color:#e0614f}
+  .inv{margin:4px 20px 20px;max-height:180px;overflow:auto;background:#12171d;border:1px solid #232c35;border-radius:6px;padding:9px 12px}
+  .inv div{font-size:12.5px;padding:3px 0;border-bottom:1px dashed #1e252d}
+  .inv div:last-child{border:0}
+  .note{margin:0 20px 22px;font-size:12px;color:#6d7784;line-height:1.75}
+  .note b{color:#96a1ae}
+</style>
+</head>
+<body>
+<header>
+  <h1>开箱模拟器 <span class="tag" id="caseTag">梦魇武器箱</span></h1>
+  <button class="case on" id="c-dreams">梦魇</button>
+  <button class="case" id="c-fever">热潮</button>
+  <div class="spacer"></div>
+  <button id="open1" class="primary">开一次</button>
+  <button id="open10">连开 10 次</button>
+  <button id="fast">快速模拟 1000 次</button>
+  <button id="sess">跑 100 次一千箱</button>
+  <button id="reset">清空</button>
+</header>
+
+<div class="stage">
+  <div class="marker"></div>
+  <div class="track" id="track"></div>
+</div>
+
+<div class="result" id="result">
+  <div class="dot" style="background:#2b343d"></div>
+  <div><div class="rn">准备好了吗</div><div class="rp">官方公示掉率 · 随机磨损 · 价格按各磨损插值</div></div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="k">已开</div><div class="v" id="s_open">0</div></div>
+  <div class="stat"><div class="k">花费</div><div class="v" id="s_cost">¥0</div></div>
+  <div class="stat"><div class="k">回收</div><div class="v" id="s_back">¥0</div></div>
+  <div class="stat"><div class="k">盈亏</div><div class="v" id="s_net">¥0</div></div>
+  <div class="stat"><div class="k">回报率</div><div class="v" id="s_roi">—</div></div>
+  <div class="stat"><div class="k">最好的一次</div><div class="v" id="s_best" style="font-size:13px">—</div></div>
+</div>
+
+<div class="inv" id="inv"><div style="color:#6d7784">开出来的东西会列在这里（虚拟，不进你的库存）</div></div>
+
+<p class="note" id="note"></p>
+
+<script>
+// ───────── 磨损 ─────────
+// 掉率口径：崭新 3% / 略磨 12% / 久经 45% / 破损 20% / 战痕 20%（社区常用统计口径）
+const WEARS = [
+  { n:'崭新出厂', s:'FN', odd:0.03, lo:0.00, hi:0.07, f:1.00 },
+  { n:'略有磨损', s:'MW', odd:0.12, lo:0.07, hi:0.15, f:0.78 },
+  { n:'久经沙场', s:'FT', odd:0.45, lo:0.15, hi:0.38, f:0.50 },
+  { n:'破损不堪', s:'WW', odd:0.20, lo:0.38, hi:0.45, f:0.22 },
+  { n:'战痕累累', s:'BS', odd:0.20, lo:0.45, hi:1.00, f:0.00 },
+];
+function rollWear(){
+  const r = Math.random(); let acc = 0;
+  for (const w of WEARS){ acc += w.odd; if (r < acc) return w; }
+  return WEARS[2];
+}
+function floatIn(w){ return +(w.lo + Math.random() * (w.hi - w.lo)).toFixed(4); }
+// 价格：低价（最差磨损）~ 高价（崭新）之间按磨损系数插值
+function priceOf(item, w){ return +(item.lo + (item.hi - item.lo) * w.f).toFixed(2); }
+
+// ───────── 箱子数据 ─────────
+// 物品 [名称, 最低价(战痕/最差), 最高价(崭新)]，单位 ¥
+const CASES = {
+  dreams: {
+    label:'梦魇武器箱', keyCost:18, caseCost:7, special:'刀',
+    tiers:[
+      { name:'军规级', odd:0.7992, color:'var(--blue)', items:[
+        ['FN57 | 涂鸦潦草',0.6,1.2],['截短霰弹枪 | 灵应牌',0.8,1.6],['MP5-SD | 小小噩梦',1.0,2.0],
+        ['MAC-10 | 坐牢',0.8,1.5],['P2000 | 升天',0.7,1.4],['MAG-7 | 先见之明',0.6,1.1],
+        ['SCAR-20 | 暗夜活死鸡',1.5,3.2] ]},
+      { name:'受限', odd:0.1598, color:'var(--purple)', items:[
+        ['USP 消音版 | 地狱门票',6,18],['M4A1 消音版 | 夜无眠',4,13],
+        ['PP-野牛 | 太空猫',2.5,5],['XM1014 | 行尸攻势',2.8,6] ]},
+      { name:'机密', odd:0.0320, color:'var(--pink)', items:[
+        ['法玛斯 | 目皆转睛',35,101],['双持贝瑞塔 | 瓜瓜',35,97],
+        ['MP7 | 幽幻深渊',35,98],['G3SG1 | 梦之林地',30,80] ]},
+      { name:'保密', odd:0.0064, color:'var(--red)', items:[
+        ['AK-47 | 夜愿',376,752],['MP9 | 星使',376,582] ]},
+      { name:'稀有特殊物品（★ 刀）', odd:0.0026, color:'var(--gold)', items:[
+        ['★ 蝴蝶刀 | 伽玛多普勒（翡翠）',30000,48443],['★ 蝴蝶刀 | 伽玛多普勒（Phase 2）',10000,15150],
+        ['★ 蝴蝶刀 | 伽玛多普勒',8000,11070],['★ 蝴蝶刀 | 自动化',3500,4470],
+        ['★ 蝴蝶刀 | 传说',2600,3420],['★ 折刀 | 伽玛多普勒',1000,1306],
+        ['★ 猎杀者匕首 | 伽玛多普勒',900,1143],['★ 鲍伊猎刀 | 伽玛多普勒',850,1065],
+        ['★ 暗影双匕 | 伽玛多普勒',450,582],['★ 鲍伊猎刀 | 伽玛多普勒（翡翠）',330,410],
+        ['★ 暗影双匕 | 传说',240,298],['★ 猎杀者匕首 | 伽玛多普勒（翡翠）',200,250],
+        ['★ 折刀 | 表面淬火',140,180],['★ 猎杀者匕首 | 自由之手',120,150],
+        ['★ 暗影双匕 | 蓝钢',105,130],['★ 鲍伊猎刀 | 表面淬火',90,110],
+        ['★ 折刀 | 致命紫罗兰',75,95],['★ 猎杀者匕首 | 都市危机',68,85],
+        ['★ 暗影双匕 | 枯焦之色',62,78],['★ 鲍伊猎刀 | 森林 DDPAT',58,72],
+        ['★ 折刀 | 森林 DDPAT',52,65],['★ 猎杀者匕首 | 森林 DDPAT',48,60],
+        ['★ 暗影双匕 | 森林 DDPAT',44,55],['★ 折刀 | 都市危机',40,50],
+        ['★ 猎杀者匕首 | 表面淬火',36,45],['★ 鲍伊猎刀 | 都市危机',32,40],
+        ['★ 暗影双匕 | 表面淬火',30,38],['★ 折刀 | 北方森林',28,35],
+        ['★ 猎杀者匕首 | 枯焦之色',26,32],['★ 鲍伊猎刀 | 北方森林',24,30] ]},
+    ]},
+  fever: {
+    label:'热潮武器箱', keyCost:18, caseCost:4.3, special:'刀',
+    tiers:[
+      { name:'军规级', odd:0.7992, color:'var(--blue)', items:[
+        ['USP 消音版 | PC-GRN',0.6,7.0],['SSG 08 | 纪念碑',0.4,6.4],['MP9 | 中枢',0.35,5.0],
+        ['MAG-7 | 重新补给',0.33,3.4],['XM1014 | 知更鸟',0.32,4.1],['P2000 | 防滑握把',0.21,3.8],
+        ['M4A4 | 战鹰',0.21,8.8] ]},
+      { name:'受限', odd:0.1598, color:'var(--purple)', items:[
+        ['沙漠之鹰 | 巨蟒冲击',2.2,8.5],['加利尔AR | 控制',2.2,17.2],
+        ['新星 | 初升之樱',2.2,20.3],['P90 | 破浪者',2.2,18.8],
+        ['宙斯x27 | 当岁鱼',1.5,8.9] ]},
+      { name:'机密', odd:0.0320, color:'var(--pink)', items:[
+        ['AK-47 | 灼心怒焰',24.7,120],['UMP-45 | K.O.工厂',21.9,92],['格洛克18型 | 忍瞳',20.6,126] ]},
+      { name:'保密', odd:0.0064, color:'var(--red)', items:[
+        ['法玛斯 | 幻灭之旅',253,490],['AWP | 印花集',242,1094] ]},
+      { name:'稀有特殊物品（★ 刀）', odd:0.0026, color:'var(--gold)', items:[
+        ['★ 骷髅匕首 | 多普勒',8000,12000],['★ 骷髅匕首 | 渐变大理石',6000,9500],
+        ['★ 骷髅匕首 | 虎牙',5200,8000],['★ 骷髅匕首 | 致命紫罗兰',2600,4200],
+        ['★ 骷髅匕首 | 大马士革钢',3000,4800],['★ 骷髅匕首 | 外表生锈',1500,2400],
+        ['★ 流浪者匕首 | 多普勒',3800,6000],['★ 流浪者匕首 | 渐变大理石',3200,5000],
+        ['★ 流浪者匕首 | 虎牙',2700,4300],['★ 流浪者匕首 | 大马士革钢',1700,2700],
+        ['★ 流浪者匕首 | 外表生锈',900,1500],['★ 系绳匕首 | 多普勒',2200,3500],
+        ['★ 系绳匕首 | 渐变大理石',1900,3000],['★ 系绳匕首 | 虎牙',1700,2600],
+        ['★ 系绳匕首 | 大马士革钢',1000,1600],['★ 系绳匕首 | 外表生锈',600,950],
+        ['★ 求生匕首 | 多普勒',1500,2400],['★ 求生匕首 | 渐变大理石',1250,2000],
+        ['★ 求生匕首 | 虎牙',1100,1800],['★ 求生匕首 | 大马士革钢',700,1100] ]},
+    ]},
+};
+
+let CASE = 'dreams';
+const ST_CHANCE = 0.10, ST_MULT = 1.4;
+const cost = () => CASES[CASE].keyCost + CASES[CASE].caseCost;
+
+function rollTier(){
+  const T = CASES[CASE].tiers;
+  const r = Math.random(); let acc = 0;
+  for (const t of T){ acc += t.odd; if (r < acc) return t; }
+  return T[0];
+}
+function rollItem(){
+  const t = rollTier();
+  const it = t.items[Math.floor(Math.random()*t.items.length)];
+  const w = rollWear();
+  const st = Math.random() < ST_CHANCE;
+  return { tier:t, name:it[0], wear:w, flt:floatIn(w),
+           price:+(priceOf({lo:it[1], hi:it[2]}, w) * (st?ST_MULT:1)).toFixed(2), st };
+}
+function randomCard(){ return { ...rollItem(), filler:true }; }
+
+const track = document.getElementById('track');
+const CARD_W = 188;
+let busy = false;
+
+function colorOf(t){
+  const m = t.color.match(/--(\w+)/);
+  return m ? getComputedStyle(document.documentElement).getPropertyValue('--'+m[1]).trim() : t.color;
+}
+function cardEl(o){
+  const d = document.createElement('div');
+  d.className = 'card';
+  d.innerHTML = `<div class="gun">🔫</div>
+    <div class="nm">${o.st?'<span class="st">StatTrak™</span> ':''}${o.name}
+      <div class="wr">${o.wear.s} · ${o.flt.toFixed(3)}</div></div>
+    <div class="bar" style="background:${colorOf(o.tier)}"></div>`;
+  return d;
+}
+function buildStrip(win){
+  track.style.transition = 'none';
+  track.style.transform = 'translateX(0px)';
+  track.innerHTML = '';
+  const total = 72, winIdx = 66;
+  for (let i=0;i<total;i++) track.appendChild(cardEl(i===winIdx ? win : randomCard()));
+  return winIdx;
+}
+function spin(win, dur = 6.2){
+  return new Promise(res => {
+    const winIdx = buildStrip(win);
+    const jitter = (Math.random()-0.5) * 120;
+    const target = -(winIdx * CARD_W) + jitter;
+    requestAnimationFrame(() => {
+      track.style.transition = `transform ${dur}s cubic-bezier(.06,.72,.06,1)`;
+      track.style.transform = `translateX(${target}px)`;
+      setTimeout(res, dur*1000 + 200);
+    });
+  });
+}
+
+const S = { opens:0, cost:0, back:0, best:null, log:[] };
+const $ = id => document.getElementById(id);
+function render(){
+  $('s_open').textContent = S.opens;
+  $('s_cost').textContent = '¥' + S.cost.toFixed(2);
+  $('s_back').textContent = '¥' + S.back.toFixed(2);
+  const net = S.back - S.cost;
+  const el = $('s_net');
+  el.textContent = (net>=0?'+¥':'-¥') + Math.abs(net).toFixed(2);
+  el.className = 'v ' + (net>=0?'pos':'neg');
+  $('s_roi').textContent = S.cost ? (S.back/S.cost*100).toFixed(1)+'%' : '—';
+  $('s_best').textContent = S.best ? `${S.best.name}（${S.best.wear.s} ¥${S.best.price}）` : '—';
+  const inv = $('inv');
+  if (!S.log.length){ inv.innerHTML = '<div style="color:#6d7784">开出来的东西会列在这里（虚拟，不进你的库存）</div>'; return; }
+  inv.innerHTML = S.log.map(o=>`<div><span style="color:${colorOf(o.tier)}">●</span> ${o.st?'<span class="st">StatTrak™</span> ':''}${o.name}
+    <span style="color:#6d7784">— ${o.wear.n} ${o.flt.toFixed(3)} · ¥${o.price}</span></div>`).join('');
+}
+function record(o){
+  S.opens++; S.cost += cost(); S.back += o.price;
+  if (!S.best || o.price > S.best.price) S.best = o;
+  S.log.unshift(o); if (S.log.length > 120) S.log.pop();
+}
+function showResult(o, prefix){
+  $('result').innerHTML =
+    `<div class="dot" style="background:${colorOf(o.tier)}"></div>
+     <div><div class="rn" style="color:${colorOf(o.tier)}">${prefix||''}${o.st?'StatTrak™ ':''}${o.name}</div>
+     <div class="rp">${o.tier.name} · <b style="color:#b9c4d0">${o.wear.n} ${o.flt.toFixed(4)}</b> · 市场价约 ¥${o.price}
+     · 成本 ¥${cost().toFixed(1)} · 这一发${o.price>=cost()?'赚':'亏'} ¥${Math.abs(o.price-cost()).toFixed(2)}</div></div>`;
+}
+
+async function one(){
+  if (busy) return; busy = true; $('open1').disabled = $('open10').disabled = true;
+  const win = rollItem(); await spin(win); record(win); showResult(win); render();
+  busy = false; $('open1').disabled = $('open10').disabled = false;
+}
+async function ten(){
+  if (busy) return; busy = true; $('open1').disabled = $('open10').disabled = true;
+  const got = [];
+  for (let i=0;i<10;i++){
+    const win = rollItem();
+    await spin(win, i===0 ? 6.2 : 2.2);
+    record(win); got.push(win);
+    const cum = got.reduce((a,b)=>a+b.price,0);
+    $('result').innerHTML = `<div class="dot" style="background:#c9a227"></div>
+      <div><div class="rn">连开中… ${i+1}/10</div>
+      <div class="rp">本次：${win.st?'StatTrak™ ':''}${win.name}（${win.wear.s} ¥${win.price}）· 累计回收 ¥${cum.toFixed(2)} / 成本 ¥${(cost()*(i+1)).toFixed(2)}</div></div>`;
+  }
+  const sum = got.reduce((a,b)=>a+b.price,0);
+  const best = got.reduce((a,b)=> b.price>a.price?b:a, got[0]);
+  const worst = got.reduce((a,b)=> b.price<a.price?b:a, got[0]);
+  const net = sum - cost()*10;
+  $('result').innerHTML =
+    `<div class="dot" style="background:${colorOf(best.tier)}"></div>
+     <div><div class="rn">连开 10 次完成：这 10 发${net>=0?'赚':'亏'} ¥${Math.abs(net).toFixed(2)}</div>
+     <div class="rp">总成本 ¥${(cost()*10).toFixed(1)} · 总回收 ¥${sum.toFixed(2)}<br>
+     这 10 次里最好的：${best.st?'StatTrak™ ':''}${best.name}（${best.wear.s} ¥${best.price}）｜最差的：${worst.name}（${worst.wear.s} ¥${worst.price}）<br>
+     明细：${got.map(o=>'¥'+o.price).join(' + ')}</div></div>`;
+  render(); busy = false; $('open1').disabled = $('open10').disabled = false;
+}
+
+$('open1').onclick = one;
+$('open10').onclick = ten;
+$('fast').onclick = () => {
+  const N = 1000; let sum = 0, win = 0, best = null; const cnt = {}; const wc = {};
+  for (let i=0;i<N;i++){
+    const o = rollItem(); sum += o.price;
+    if (o.price >= cost()) win++;
+    if (!best || o.price > best.price) best = o;
+    cnt[o.tier.name] = (cnt[o.tier.name]||0)+1;
+    wc[o.wear.s] = (wc[o.wear.s]||0)+1;
+  }
+  S.opens += N; S.cost += cost()*N; S.back += sum;
+  if (!S.best || best.price > S.best.price) S.best = best;
+  const net = sum - cost()*N;
+  const dist = Object.entries(cnt).map(([k,v])=>`${k} ${v}（${(v/N*100).toFixed(2)}%）`).join(' ｜ ');
+  const wdist = WEARS.map(w=>`${w.s} ${wc[w.s]||0}（${((wc[w.s]||0)/N*100).toFixed(1)}%）`).join(' ｜ ');
+  $('result').innerHTML = `<div class="dot" style="background:#c9a227"></div>
+    <div><div class="rn">快速模拟 ${N} 次</div>
+    <div class="rp">总成本 ¥${(cost()*N).toLocaleString()} · 总回收 ¥${sum.toFixed(0)} · 净 ${net>=0?'+':'-'}¥${Math.abs(net).toFixed(0)} · 回本 ${win} 次（${(win/N*100).toFixed(1)}%）· 最好 ${best.name}（${best.wear.s} ¥${best.price}）<br>${dist}<br>磨损分布：${wdist}</div></div>`;
+  render();
+};
+$('sess').onclick = () => {
+  const SESS = 100, OPENS = 1000, profits = [], nets = [];
+  for (let s=0;s<SESS;s++){
+    let back = 0;
+    for (let i=0;i<OPENS;i++) back += rollItem().price;
+    profits.push(back); nets.push(back - cost()*OPENS);
+  }
+  nets.sort((a,b)=>a-b); profits.sort((a,b)=>a-b);
+  const q = (a,p)=>a[Math.floor(p*(a.length-1))];
+  const gain = nets.filter(n=>n>0).length;
+  $('result').innerHTML = `<div class="dot" style="background:#c9a227"></div>
+    <div><div class="rn">跑 ${SESS} 次「开 1000 箱」</div>
+    <div class="rp">回收额：最差 ¥${profits[0].toFixed(0)} ｜ 中位 ¥${q(profits,.5).toFixed(0)} ｜ 最好 ¥${profits[profits.length-1].toFixed(0)}<br>
+    净盈亏：最差 ¥${nets[0].toFixed(0)} ｜ <b>中位 ¥${q(nets,.5).toFixed(0)}</b> ｜ 最好 ¥${nets[nets.length-1].toFixed(0)}<br>
+    赚钱的会话：${gain}/${SESS}（${(gain/SESS*100).toFixed(1)}%）· 回报率中位数 ${(q(profits,.5)/(cost()*OPENS)*100).toFixed(1)}%</div></div>`;
+};
+$('reset').onclick = () => { S.opens=0;S.cost=0;S.back=0;S.best=null;S.log=[]; render();
+  $('result').innerHTML = '<div class="dot" style="background:#2b343d"></div><div><div class="rn">已清空</div><div class="rp">统计归零</div></div>'; };
+
+function syncNote(){
+  const c = CASES[CASE];
+  // 模型 EV：按官方掉率 + 磨损分布算
+  let ev = 0;
+  for (const t of c.tiers){
+    let m = 0;
+    for (const it of t.items){
+      let e = 0;
+      for (const w of WEARS) e += w.odd * priceOf({lo:it[1], hi:it[2]}, w);
+      m += e;
+    }
+    m = m / t.items.length * (1 + ST_CHANCE * (ST_MULT - 1));
+    ev += t.odd * m;
+    c.tiers[c.tiers.indexOf(t)]._ev = m;
+  }
+  $('caseTag').textContent = c.label;
+  $('note').innerHTML = `<b>${c.label}</b>　成本：钥匙 ¥${c.keyCost}（官方 $2.49，不打折、不可交易）＋ 箱子 ¥${c.caseCost} = <b>¥${(c.keyCost+c.caseCost).toFixed(1)}／次</b><br>
+  <b>掉率</b>：军规 79.92% ｜ 受限 15.98% ｜ 机密 3.2% ｜ 保密 0.64% ｜ 稀有特殊（★）0.26%（约 385 分之一）；StatTrak™ 10%<br>
+  <b>磨损</b>：崭新 3% ｜ 略磨 12% ｜ 久经 45% ｜ 破损 20% ｜ 战痕 20%（社区统计口径）；价格按每件皮肤的「战痕价 ↔ 崭新价」区间插值<br>
+  <b>本模型期望值 ≈ ¥${ev.toFixed(2)}／次</b>，每次成本 ¥${(c.keyCost+c.caseCost).toFixed(1)} → 长期平均<b>每次${ev>=c.keyCost+c.caseCost?'赚':'亏'} ¥${Math.abs(ev-(c.keyCost+c.caseCost)).toFixed(2)}</b>（约 ${(ev/(c.keyCost+c.caseCost)*100).toFixed(0)}% 回报率）<br>
+  <b>数据来源</b>：物品名与档位取自公开掉落表；价格为今日第三方市场区间（steamdb / skinsniper）；★ 刀池为抽样（梦魇 30 把 / 热潮 20 把，真实分别 55 / 52）<br>
+  <b>提醒</b>：模拟结果不进库存；短期波动正是随机系统骗人的地方。`;
+}
+function setCase(k){
+  CASE = k;
+  $('c-dreams').classList.toggle('on', k==='dreams');
+  $('c-fever').classList.toggle('on', k==='fever');
+  $('reset').onclick();
+  syncNote();
+}
+$('c-dreams').onclick = () => setCase('dreams');
+$('c-fever').onclick = () => setCase('fever');
+syncNote(); render();
+</script>
+</body>
+</html>
