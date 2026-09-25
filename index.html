@@ -162,7 +162,9 @@ function rollItem(){
   return { tier:t, name:it[0], price:+(it[1]*(st?ST_MULT:1)).toFixed(2), st };
 }
 function randomCard(){
-  const t = TIERS[Math.floor(Math.random()*TIERS.length)];
+  // 滚动带里的填充卡也按「真实掉率」抽——所以你会看到整条带子基本都是蓝的，
+  // 偶尔才有紫/粉，刀几乎不出现。这才是真开箱的样子。
+  const t = rollTier();
   const it = t.items[Math.floor(Math.random()*t.items.length)];
   return { tier:t, name:it[0], price:it[1], st:Math.random()<ST_CHANCE, filler:true };
 }
